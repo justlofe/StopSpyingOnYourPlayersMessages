@@ -165,7 +165,7 @@ final class ChatCommandPacketInterceptor extends ChannelInboundHandlerAdapter {
     private boolean isMsgCommand(String command) {
         String[] parts = command.split(" ");
         if(parts.length == 1) return false;
-        return targetCommands.contains(command.toLowerCase());
+        return targetCommands.contains(parts[0]);
     }
 
     private void tryHandleChat(String message, boolean isCommand, Runnable chatHandler, boolean sync) throws Exception {
