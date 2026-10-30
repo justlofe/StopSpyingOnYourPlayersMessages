@@ -1,0 +1,5 @@
+name: StopSpyingOnYourPlayersMessages
+version: $version
+
+main: fun.lofe.ssoypm.paper.SSOYPMPaperPlugin
+api-version: "26.3"
