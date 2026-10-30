@@ -52,7 +52,8 @@ final class ChatCommandPacketInterceptor extends ChannelInboundHandlerAdapter {
             collectSignedArguments,
             parseCommand,
             tryHandleChat,
-            unpackAndApplyLastSeen;
+            unpackAndApplyLastSeen,
+            detectCommandRateSpam;
 
     private static final Logger LOGGER;
     private static final Component INVALID_COMMAND_SIGNATURE;
@@ -70,6 +71,9 @@ final class ChatCommandPacketInterceptor extends ChannelInboundHandlerAdapter {
 
             unpackAndApplyLastSeen = ServerGamePacketListenerImpl.class.getDeclaredMethod("unpackAndApplyLastSeen", LastSeenMessages.Update.class);
             unpackAndApplyLastSeen.setAccessible(true);
+
+            detectCommandRateSpam = ServerGamePacketListenerImpl.class.getDeclaredMethod("detectCommandRateSpam", String.class);
+            detectCommandRateSpam.setAccessible(true);
 
             Field loggerField = ServerGamePacketListenerImpl.class.getDeclaredField("LOGGER");
             loggerField.setAccessible(true);
@@ -121,6 +125,8 @@ final class ChatCommandPacketInterceptor extends ChannelInboundHandlerAdapter {
                     else {
                         this.server.getCommands().performCommand(parsed, command);
                     }
+
+                    detectCommandRateSpam(command);
                 }
             }, true);
             return;
@@ -146,6 +152,8 @@ final class ChatCommandPacketInterceptor extends ChannelInboundHandlerAdapter {
                     CommandSigningContext signingContext = new CommandSigningContext.SignedArguments(signedArguments);
                     command = Commands.mapSource(command, (source) -> source.withSigningContext(signingContext, this.chatMessageChain));
                     this.server.getCommands().performCommand(command, packet.command());
+
+                    detectCommandRateSpam(packet.command());
                 }
             }, true);
             return;
@@ -190,6 +198,15 @@ final class ChatCommandPacketInterceptor extends ChannelInboundHandlerAdapter {
     private Optional<LastSeenMessages> unpackAndApplyLastSeen(LastSeenMessages.Update update) {
         try {
             return (Optional<LastSeenMessages>) unpackAndApplyLastSeen.invoke(serverGamePacketListener, update);
+        }
+        catch (Exception exception) {
+            throw new RuntimeException(exception);
+        }
+    }
+
+    private void detectCommandRateSpam(String command) {
+        try {
+            detectCommandRateSpam.invoke(serverGamePacketListener, command);
         }
         catch (Exception exception) {
             throw new RuntimeException(exception);
